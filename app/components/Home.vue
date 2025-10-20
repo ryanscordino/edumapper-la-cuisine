@@ -71,6 +71,31 @@ function onSpecConfirm(payload: { option1: string | null; option2: string | null
     selections['Spécialité'].option2 = payload.option2 ?? null
 }
 
+// import state tracked from ImportCard
+const importState = ref<{ fileName: string | null; imported: boolean }>({ fileName: null, imported: false })
+
+function onImportStatus(payload: { fileName: string | null; imported: boolean }) {
+    importState.value = payload
+}
+
+function onImportNext(payload: { fileName: string | null; imported: boolean }) {
+    // navigate to results including fileName if available
+    const q = new URLSearchParams()
+    q.set('classe', selections.Classe.option1 as string)
+    q.set('bac', selections.Classe.option2 as string)
+    q.set('specialite', selections['Spécialité'].option1 as string)
+    if (payload.imported && payload.fileName) q.set('file', payload.fileName)
+    navigateTo('/results?' + q.toString())
+}
+
+function onImportSkip() {
+    const q = new URLSearchParams()
+    q.set('classe', selections.Classe.option1 as string)
+    q.set('bac', selections.Classe.option2 as string)
+    q.set('specialite', selections['Spécialité'].option1 as string)
+    navigateTo('/results?' + q.toString())
+}
+
 const isValid = computed(() => {
     return !!selections.Classe.option1 && !!selections.Classe.option2 && !!selections['Spécialité'].option1
 })
@@ -109,17 +134,18 @@ function proceed() {
                         </div>
                     </div>
 
-                                        <template v-if="!confirmed">
-                                            <CardSelect category="Classe" :option-1="['Seconde', 'Première', 'Terminale']"
-                                                    :option-2="['Général', 'Technologique', 'Professionnel']" @confirm="onClasseConfirm" />
+                    <template v-if="!confirmed">
+                        <CardSelect category="Classe" :option1="['Seconde', 'Première', 'Terminale']"
+                            :option2="['Général', 'Technologique', 'Professionnel']" @confirm="onClasseConfirm" />
 
-                                            <CardSelect category="Spécialité"
-                                                    :option-1="['HGGSP', 'HLP', 'LLCE', 'LCA', 'Maths', 'NSI', 'PC', 'SVT', 'SI', 'SES', 'EPS', 'Arts', 'BE']" @confirm="onSpecConfirm" />
-                                        </template>
+                        <CardSelect category="Spécialité"
+                            :option1="['HGGSP', 'HLP', 'LLCE', 'LCA', 'Maths', 'NSI', 'PC', 'SVT', 'SI', 'SES', 'EPS', 'Arts', 'BE']"
+                            @confirm="onSpecConfirm" />
+                    </template>
 
-                                        <template v-if="confirmed">
-                                            <ImportCard />
-                                        </template>
+                    <template v-if="confirmed">
+                        <ImportCard @previous="() => (confirmed = false)" @status="onImportStatus" @next="onImportNext" @skip="onImportSkip" />
+                    </template>
 
                 </div>
                 <div v-else class="text-gray-500">
@@ -128,19 +154,25 @@ function proceed() {
             </div>
 
         </div>
-        <button
-            v-if="!confirmed"
-            type="button"
-            aria-label="Confirmer"
-            :disabled="!isValid"
-            @click="proceed"
-            :class="{
-                'fixed bottom-8 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full z-50': true,
-                'bg-stone-950 text-white': isValid,
-                'bg-white text-gray-400 border-[0.5px] border-gray-400 cursor-not-allowed': !isValid
-            }"
-        >
+        <button v-if="!confirmed" type="button" aria-label="Confirmer" :disabled="!isValid" @click="proceed" :class="{
+            'fixed bottom-8 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full z-50': true,
+            'bg-stone-950 text-white': isValid,
+            'bg-white text-gray-400 border-[0.5px] border-gray-400 cursor-not-allowed': !isValid
+        }">
             Confirmer
         </button>
+
+        <!-- Bottom action toolbar when confirmed (mirrors ImportCard actions) -->
+        <div v-if="confirmed" class="fixed bottom-6 left-0 right-0 px-4 z-50">
+            <div class="max-w-3xl mx-auto">
+                <div class="grid grid-cols-2 gap-3">
+                    <button @click="() => (confirmed = false)" class="px-4 py-2 rounded-full border">Précédent</button>
+                    <button @click="() => importState.imported && onImportNext(importState)" :disabled="!importState.imported" class="px-4 py-2 rounded-full bg-stone-950 text-white disabled:opacity-50">Suivant</button>
+                </div>
+                <div class="mt-2">
+                    <button @click="onImportSkip" class="w-full px-4 py-2 rounded-full border text-sm">Je n'ai pas de fiche Avenir pour cette formation</button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
