@@ -4,4 +4,5 @@
 :root{
     --ui-bg: #F7F3F0;
     --ui-border: #E0E0E0;
+    --ui-text: var(--ui-color-stone-950)
 }
